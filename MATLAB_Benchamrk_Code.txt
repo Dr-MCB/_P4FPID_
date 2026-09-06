@@ -1,0 +1,25 @@
+clear;
+clc;
+%% Load ready-made FIS
+fis = readfis('7times7.fis');
+%fis = readfis('5times5.fis');
+%fis = readfis('3times3.fis');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % 1 instruction Code
+% tic;
+% X = evalfis([13 45], fis);
+% t_exec = toc;
+% fprintf('Output: %.10f\n', X);
+% fprintf('Execution time: %.6f seconds\n', t_exec);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Grid Generating Code
+er_values = -100:1:100;
+der_values = -100:1:100;
+[ER, DER] = meshgrid(er_values, der_values);
+InputMatrix = [ER(:), DER(:)];
+tic;
+OutputVector = evalfis(InputMatrix, fis);
+t_exec = toc;
+fprintf('Execution time: %.6f seconds\n', t_exec);
+clear
+

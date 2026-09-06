@@ -1,0 +1,318 @@
+from simpful import *
+import time
+import numpy as np
+# =========================================================
+# SELECT FUZZY CONFIGURATION
+# =========================================================
+
+# CONFIGURATION = "7x7"
+# CONFIGURATION = "5x5"
+CONFIGURATION = "3x3"
+
+
+# =========================================================
+# FUZZY SYSTEM DEFINITION
+# =========================================================
+
+FS = FuzzySystem()
+
+
+# =========================================================
+# 7 x 7 CONFIGURATION
+# =========================================================
+
+if CONFIGURATION == "7x7":
+
+    # -----------------------------------------------------
+    # Membership functions
+    # -----------------------------------------------------
+
+    MF = {
+        "NB": [-100, -88, -75, -54],
+        "NM": [-81,  -60, -48, -27],
+        "NS": [-54,  -33, -21,   0],
+        "ZE": [-27,   -6,   6,  27],
+        "PS": [  0,   21,  33,  54],
+        "PM": [ 27,   48,  60,  82],
+        "PB": [ 54,   75,  88, 100]
+    }
+
+    names = ["NB", "NM", "NS", "ZE", "PS", "PM", "PB"]
+
+    # -----------------------------------------------------
+    # Rule matrix
+    #
+    # Rows    = Error
+    # Columns = Error_Dot
+    # Values  = Output
+    # -----------------------------------------------------
+
+    RULE_MATRIX = [
+        ["NB", "NB", "NB", "NB", "NM", "NS", "ZE"],
+        ["NB", "NB", "NB", "NM", "NS", "ZE", "PS"],
+        ["NB", "NB", "NM", "NS", "ZE", "PS", "PM"],
+        ["NB", "NM", "NS", "ZE", "PS", "PM", "PB"],
+        ["NM", "NS", "ZE", "PS", "PM", "PB", "PB"],
+        ["NS", "ZE", "PS", "PM", "PB", "PB", "PB"],
+        ["ZE", "PS", "PM", "PB", "PB", "PB", "PB"]
+    ]
+
+
+# =========================================================
+# 5 x 5 CONFIGURATION
+# =========================================================
+
+elif CONFIGURATION == "5x5":
+
+    # -----------------------------------------------------
+    # Membership functions
+    # -----------------------------------------------------
+
+    MF = {
+        "NB": [-100, -82, -65, -36],
+        "N":  [-73,  -45, -28,   0],
+        "ZE": [-36,   -8,   8,  36],
+        "P":  [  0,   28,  45,  73],
+        "PB": [ 36,   65,  82,  99]
+    }
+
+    names = ["NB", "N", "ZE", "P", "PB"]
+
+    # -----------------------------------------------------
+    # Rule matrix
+    # -----------------------------------------------------
+
+    RULE_MATRIX = [
+        ["NB", "NB", "NB", "N",  "ZE"],
+        ["NB", "NB", "N",  "ZE", "P" ],
+        ["NB", "N",  "ZE", "P",  "PB"],
+        ["N",  "ZE", "P",  "PB", "PB"],
+        ["ZE", "P",  "PB", "PB", "PB"]
+    ]
+
+
+# =========================================================
+# 3 x 3 CONFIGURATION
+# =========================================================
+
+elif CONFIGURATION == "3x3":
+
+    # -----------------------------------------------------
+    # Membership functions
+    # -----------------------------------------------------
+
+    MF = {
+        "N":  [-100, -71, -42,   0],
+        "ZE": [ -56, -14,  14,  56],
+        "P":  [   0,  42,  71,  99]
+    }
+
+    names = ["N", "ZE", "P"]
+
+    # -----------------------------------------------------
+    # Rule matrix
+    # -----------------------------------------------------
+
+    RULE_MATRIX = [
+        ["N",  "N",  "ZE"],
+        ["N",  "ZE", "P" ],
+        ["ZE", "P",  "P" ]
+    ]
+
+
+else:
+
+    raise ValueError(
+        "Invalid CONFIGURATION. Use '3x3', '5x5', or '7x7'."
+    )
+
+
+# =========================================================
+# CREATE INPUT 1: ERROR
+# =========================================================
+
+for name in names:
+
+    a, b, c, d = MF[name]
+
+    fuzzy_set = FuzzySet(
+        function=Trapezoidal_MF(a=a, b=b, c=c, d=d),
+        term=name
+    )
+
+    if name == names[0]:
+
+        error_sets = [fuzzy_set]
+
+    else:
+
+        error_sets.append(fuzzy_set)
+
+
+FS.add_linguistic_variable(
+    "Error",
+    LinguisticVariable(
+        error_sets,
+        universe_of_discourse=[-100, 100]
+    )
+)
+
+
+# =========================================================
+# CREATE INPUT 2: ERROR DERIVATIVE
+# =========================================================
+
+for name in names:
+
+    a, b, c, d = MF[name]
+
+    fuzzy_set = FuzzySet(
+        function=Trapezoidal_MF(a=a, b=b, c=c, d=d),
+        term=name
+    )
+
+    if name == names[0]:
+
+        error_dot_sets = [fuzzy_set]
+
+    else:
+
+        error_dot_sets.append(fuzzy_set)
+
+
+FS.add_linguistic_variable(
+    "Error_Dot",
+    LinguisticVariable(
+        error_dot_sets,
+        universe_of_discourse=[-99, 99]
+    )
+)
+
+
+# =========================================================
+# CREATE OUTPUT
+# =========================================================
+
+for name in names:
+
+    a, b, c, d = MF[name]
+
+    fuzzy_set = FuzzySet(
+        function=Trapezoidal_MF(a=a, b=b, c=c, d=d),
+        term=name
+    )
+
+    if name == names[0]:
+
+        output_sets = [fuzzy_set]
+
+    else:
+
+        output_sets.append(fuzzy_set)
+
+
+FS.add_linguistic_variable(
+    "Output",
+    LinguisticVariable(
+        output_sets,
+        universe_of_discourse=[-99, 99]
+    )
+)
+
+
+# =========================================================
+# CREATE RULES
+# =========================================================
+
+rules = []
+
+for i in range(len(names)):
+
+    for j in range(len(names)):
+
+        error_term = names[i]
+        error_dot_term = names[j]
+        output_term = RULE_MATRIX[i][j]
+
+        rule = (
+            "IF (Error IS " + error_term +
+            ") AND (Error_Dot IS " + error_dot_term +
+            ") THEN (Output IS " + output_term + ")"
+        )
+
+        rules.append(rule)
+
+
+FS.add_rules(rules)
+
+
+# =========================================================
+# DISPLAY CONFIGURATION INFORMATION
+# =========================================================
+
+print("==============================================")
+print("Simpful Fuzzy Logic Benchmark")
+print("==============================================")
+print("Configuration:", CONFIGURATION)
+print("Number of rules:", len(rules))
+print("Number of MFs per variable:", len(names))
+print("==============================================")
+
+
+# =========================================================
+# FUZZY INFERENCE
+# =========================================================
+
+
+
+
+
+# =========================================================
+# EXECUTION TIME
+# =========================================================
+# Error = 13
+# Error_Dot = 45
+
+
+# FS.set_variable("Error", Error)
+# FS.set_variable("Error_Dot", Error_Dot)
+
+# t0 = time.perf_counter()
+# X = FS.Mamdani_inference(
+#     ["Output"],
+#     aggregation_function=max
+# )
+# t_exec = time.perf_counter() - t0
+# print("Execution time:", t_exec, "seconds")
+# print("Output:", X["Output"] )
+
+
+
+er_values = np.arange(-100, 100, 50)
+der_values = np.arange(-100, 100, 50)
+
+# Create the same N×2 input matrix as MATLAB
+ER, DER = np.meshgrid(er_values, der_values)
+inputs = np.column_stack((ER.ravel(), DER.ravel()))
+
+OutputVector = np.zeros(len(inputs))
+
+t0 = time.perf_counter()
+
+for k, (er, der) in enumerate(inputs):
+
+    FS.set_variable("Error", er)
+    FS.set_variable("Error_Dot", der)
+
+    X = FS.Mamdani_inference(
+        ["Output"],
+        subdivisions=1000,
+        aggregation_function=max
+    )
+
+
+t_exec = time.perf_counter() - t0
+
+
+print("Execution time:", t_exec, "seconds")
+
