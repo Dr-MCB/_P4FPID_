@@ -1,0 +1,15 @@
+
+% Check the used RTK method (ode45), the sampling time (fixed, 0.02), the simulation time (20 s)
+clear;
+clc;
+modelName = "MATLAB_Benchmark";
+
+load_system(modelName);
+     
+tic;
+simOut = sim(modelName);
+elapsedTime = toc;
+
+
+fprintf('Execution time: %.4f seconds\n', elapsedTime);
+% close_system(modelName, 0);
